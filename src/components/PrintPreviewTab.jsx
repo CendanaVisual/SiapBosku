@@ -211,16 +211,27 @@ export default function PrintPreviewTab({
 
   const kalimatBast = tanggalKeKalimatBAST(compiledDoc.tanggal_bast);
 
-  // Komponen Kop Surat Resmi Sekolah
+  // Komponen Kop Surat Resmi Sekolah dengan Logo SiapBosKu
   const KopSuratSekolah = () => (
-    <div className="border-b-4 border-double border-black pb-2.5 mb-4 text-center font-serif text-black">
-      <div className="text-sm font-bold uppercase tracking-wide">{sekolah.pemerintah_daerah}</div>
-      <div className="text-sm font-bold uppercase tracking-wide">{sekolah.nama_dinas}</div>
-      <div className="text-xl font-extrabold uppercase tracking-wider mt-0.5">{sekolah.nama_sekolah}</div>
-      <div className="text-xs mt-0.5">
-        Alamat: {sekolah.alamat} • Telp: {sekolah.telepon} • NPSN: {sekolah.npsn}
+    <div className="border-b-4 border-double border-black pb-2.5 mb-4 flex items-center justify-between gap-4 font-serif text-black">
+      <img
+        src="./logo-siapbosku.png"
+        onError={(e) => {
+          e.currentTarget.src = './logo-siapbosku.gif';
+        }}
+        alt="Logo Sekolah / SiapBosKu"
+        className="w-16 h-16 object-contain shrink-0"
+      />
+      <div className="text-center flex-1">
+        <div className="text-sm font-bold uppercase tracking-wide">{sekolah.pemerintah_daerah}</div>
+        <div className="text-sm font-bold uppercase tracking-wide">{sekolah.nama_dinas}</div>
+        <div className="text-xl font-extrabold uppercase tracking-wider mt-0.5">{sekolah.nama_sekolah}</div>
+        <div className="text-xs mt-0.5">
+          Alamat: {sekolah.alamat} • Telp: {sekolah.telepon} • NPSN: {sekolah.npsn}
+        </div>
+        <div className="text-[11px] italic">Pos-el: {sekolah.email}</div>
       </div>
-      <div className="text-[11px] italic">Pos-el: {sekolah.email}</div>
+      <div className="w-16 shrink-0" />
     </div>
   );
 

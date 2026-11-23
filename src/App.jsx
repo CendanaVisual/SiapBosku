@@ -7,8 +7,7 @@ import {
   Building2,
   ShieldCheck,
   RefreshCw,
-  CheckCircle2,
-  AlertTriangle,
+  Lock,
   Sparkles,
 } from 'lucide-react';
 import {
@@ -23,6 +22,7 @@ import {
   fetchAllCloudData,
   saveProfilSekolah,
 } from './services/neonClient';
+import BalineseOrnamentFrame, { HeaderBaliSilhouette } from './components/BalineseOrnamentFrame';
 import DatabaseSettingsModal from './components/DatabaseSettingsModal';
 import SqliteInspectorTab from './components/SqliteInspectorTab';
 import BkuGroupingTab from './components/BkuGroupingTab';
@@ -185,6 +185,7 @@ export default function App() {
       label: '1. Pembaca SQLite & Table Inspector',
       badge: `${tables.length} Tabel`,
       icon: FileSpreadsheet,
+      protectedPin: true,
     },
     {
       id: 'BKU_GROUPING',
@@ -207,39 +208,70 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800">
-      {/* Header Utama Aplikasi (Disembunyikan saat @media print) */}
-      <header className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
-          {/* Brand & Nama Aplikasi */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-400/30 font-extrabold text-lg tracking-tighter">
-              SB
+    <div className="min-h-screen flex flex-col relative text-slate-800">
+      {/* Latar Belakang Tekstur Transparan Batik Emas & Sisi Kiri-Kanan Arsitektur Bali Modern */}
+      <BalineseOrnamentFrame />
+
+      {/* Header Utama Berwarna Soft Champagne-Gold & Berkilau Terus-Menerus */}
+      <header className="luxury-header-shimmer border-b-2 border-amber-400/70 shadow-md sticky top-0 z-30 print:hidden">
+        {/* Garis Pita Emas Atas */}
+        <div className="h-1 w-full bg-gradient-to-r from-amber-600 via-yellow-300 to-amber-600" />
+
+        {/* Siluet Arsitektur Bali Modern di Sisi Kiri & Kanan Header */}
+        <div className="absolute left-0 bottom-0 top-1 hidden sm:block pointer-events-none z-0">
+          <HeaderBaliSilhouette flip={false} />
+        </div>
+        <div className="absolute right-0 bottom-0 top-1 hidden sm:block pointer-events-none z-0">
+          <HeaderBaliSilhouette flip={true} />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+          {/* Logo GIF/PNG SiapBosKu & Identitas Sekolah */}
+          <div className="flex items-center gap-4">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/95 p-1 shadow-lg border-2 border-amber-500/80 flex items-center justify-center shrink-0">
+              <img
+                src="./logo-siapbosku.gif"
+                onError={(e) => {
+                  e.currentTarget.src = './logo-siapbosku.png';
+                }}
+                alt="Logo SiapBosKu Pengelolaan Keuangan Sekolah"
+                className="w-full h-full object-contain logo-gleam-effect"
+              />
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-400 text-[#16233b] flex items-center justify-center shadow">
+                <Sparkles className="w-3 h-3" />
+              </span>
             </div>
+
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-extrabold tracking-tight">
-                  SiapBosKu — Sistem Administrasi & Cetak SPJ ARKAS
-                </h1>
-                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                  ARKAS 4 • SQLite WASM + Neon Cloud
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#16233b] text-amber-300 border border-amber-400/60 shadow-sm">
+                  SIAPBOSKU • ARKAS 4
+                </span>
+                <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-950 border border-amber-500/40">
+                  SQLite WASM + Cloud Neon PostgreSQL
                 </span>
               </div>
-              <p className="text-xs text-blue-200/80">
+              <h1
+                className="text-lg sm:text-xl font-extrabold tracking-tight text-[#16233b] mt-0.5"
+                style={{ fontFamily: "'Cinzel', Georgia, serif" }}
+              >
+                Sistem Administrasi & Cetak SPJ ARKAS
+              </h1>
+              <p className="text-xs font-semibold text-amber-950/85">
                 {profilSekolah?.nama_sekolah || 'SD NEGERI 7 PEDUNGAN'} • NPSN:{' '}
                 {profilSekolah?.npsn || '50103123'} • Tahun Anggaran {profilSekolah?.tahun_anggaran || 2026}
               </p>
             </div>
           </div>
 
-          {/* Indikator & Tombol Pengaturan Koneksi Database Neon */}
+          {/* Indikator & Tombol Pengaturan Koneksi Database Neon (Dilindungi PIN) */}
           <div className="flex items-center gap-2.5">
             {cloudStatus.connected && (
               <button
                 type="button"
                 onClick={refreshNeonData}
                 disabled={cloudStatus.loading}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/15 text-blue-200 transition"
+                className="p-2.5 rounded-xl bg-white/80 hover:bg-white text-[#16233b] border border-amber-400/60 shadow-sm transition"
                 title="Sinkronkan ulang dengan Cloud Neon"
               >
                 <RefreshCw className={`w-4 h-4 ${cloudStatus.loading ? 'animate-spin' : ''}`} />
@@ -249,13 +281,13 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsDbModalOpen(true)}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition ${
+              className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold border shadow-sm transition ${
                 cloudStatus.connected
-                  ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-200 hover:bg-emerald-500/25'
-                  : 'bg-amber-500/20 border-amber-400/40 text-amber-200 hover:bg-amber-500/30'
+                  ? 'bg-[#16233b] hover:bg-[#223559] border-amber-400/70 text-amber-200'
+                  : 'bg-amber-900 hover:bg-amber-950 border-amber-300 text-amber-100'
               }`}
             >
-              <Database className="w-4 h-4" />
+              <Database className="w-4 h-4 text-amber-400" />
               <div className="text-left">
                 <div className="flex items-center gap-1.5">
                   <span
@@ -264,6 +296,7 @@ export default function App() {
                     }`}
                   />
                   <span>{cloudStatus.connected ? 'Neon Cloud Aktif' : 'Atur Koneksi Neon'}</span>
+                  <Lock className="w-3 h-3 text-amber-400/90 ml-0.5" title="Dilindungi PIN Pengaman" />
                 </div>
               </div>
             </button>
@@ -271,7 +304,7 @@ export default function App() {
         </div>
 
         {/* Navigasi Tab 4 Modul Utama */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-1 flex items-center gap-1.5 overflow-x-auto">
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-8 pt-1 flex items-center gap-1.5 overflow-x-auto">
           {navItems.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -280,17 +313,25 @@ export default function App() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold border-b-2 whitespace-nowrap transition ${
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold border-t border-x whitespace-nowrap transition ${
                   isActive
-                    ? 'bg-slate-50 text-blue-900 border-blue-600'
-                    : 'text-slate-300 border-transparent hover:text-white hover:bg-white/5'
+                    ? 'bg-[#16233b] text-amber-200 border-amber-400/80 shadow-sm'
+                    : 'bg-white/65 text-[#16233b] border-amber-300/60 hover:bg-white/95'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-amber-700'}`} />
                 <span>{tab.label}</span>
+                {tab.protectedPin && (
+                  <Lock
+                    className={`w-3 h-3 ${isActive ? 'text-amber-300' : 'text-amber-700'}`}
+                    title="Dilindungi PIN Pengaman"
+                  />
+                )}
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                    isActive ? 'bg-blue-100 text-blue-800' : 'bg-white/10 text-slate-300'
+                    isActive
+                      ? 'bg-amber-400/20 text-amber-200 border border-amber-400/40'
+                      : 'bg-amber-100/90 text-amber-900'
                   }`}
                 >
                   {tab.badge}
@@ -301,11 +342,11 @@ export default function App() {
         </div>
       </header>
 
-      {/* Konten Utama Aplikasi */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 print:p-0 print:max-w-none">
+      {/* Konten Utama Aplikasi (Diberi padding horizontal pada layar besar agar ornamen Bali kiri-kanan tampil anggun) */}
+      <main className="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 sm:px-8 lg:px-14 py-6 print:p-0 print:max-w-none">
         {loadingSqlite && (
-          <div className="mb-4 p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center gap-2.5 print:hidden">
-            <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+          <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs font-semibold flex items-center gap-2.5 print:hidden">
+            <RefreshCw className="w-4 h-4 animate-spin text-amber-700" />
             Memproses database SQLite ARKAS di memori WebAssembly browser...
           </div>
         )}
@@ -357,17 +398,17 @@ export default function App() {
       </main>
 
       {/* Footer Aplikasi (Disembunyikan saat @media print) */}
-      <footer className="bg-white border-t border-slate-200 py-3.5 px-6 text-xs text-slate-500 print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <footer className="relative z-10 luxury-header-shimmer border-t border-amber-300/80 py-3.5 px-6 text-xs text-[#16233b] print:hidden">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <ShieldCheck className="w-4 h-4 text-amber-700" />
             <span>
               <strong>SiapBosKu</strong> — Pembaca SQLite ARKAS 4 (<code className="font-mono">sql.js</code> WebAssembly)
               & Sinkronisasi Cloud Neon PostgreSQL
             </span>
           </div>
-          <div>
-            Keamanan Kredensial: Tanpa Hardcoded Secret • Siap Deploy GitHub Pages
+          <div className="font-semibold text-amber-950/80">
+            Arsitektur Bali Modern • Dilindungi PIN Keamanan & Tanpa Hardcoded Secret
           </div>
         </div>
       </footer>

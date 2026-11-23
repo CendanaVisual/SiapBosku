@@ -11,6 +11,9 @@ import {
   Check,
   X,
   Lock,
+  Unlock,
+  Eye,
+  EyeOff,
   Server,
   Sparkles,
 } from 'lucide-react';
@@ -22,6 +25,8 @@ import {
   maskConnectionUrl,
   initializeNeonSchema,
 } from '../services/neonClient';
+
+const REQUIRED_PIN = 'siapbos123';
 
 const SQL_SCHEMA_PREVIEW = `-- Skrip Inisialisasi Otomatis Tabel Cloud Neon (PostgreSQL)
 CREATE TABLE IF NOT EXISTS profil_sekolah (
@@ -65,6 +70,11 @@ CREATE TABLE IF NOT EXISTS spj_pelengkap (
 );`;
 
 export default function DatabaseSettingsModal({ isOpen, onClose, onConnectionUpdated, cloudStatus }) {
+  const [isPinUnlocked, setIsPinUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [pinError, setPinError] = useState('');
+
   const [connInfo, setConnInfo] = useState({ url: '', source: '' });
   const [inputUrl, setInputUrl] = useState('');
   const [storageMode, setStorageMode] = useState('localStorage');
@@ -75,6 +85,12 @@ export default function DatabaseSettingsModal({ isOpen, onClose, onConnectionUpd
 
   useEffect(() => {
     if (isOpen) {
+      // Setiap kali modal dibuka, wajib autentikasi PIN pengaman terlebih dahulu
+      setIsPinUnlocked(false);
+      setPinInput('');
+      setPinError('');
+      setShowPin(false);
+
       const info = getActiveNeonConnectionInfo();
       setConnInfo(info);
       setStorageMode(getSavedStorageMode());
@@ -84,6 +100,17 @@ export default function DatabaseSettingsModal({ isOpen, onClose, onConnectionUpd
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleVerifyPin = (e) => {
+    e.preventDefault();
+    if (pinInput.trim() === REQUIRED_PIN) {
+      setIsPinUnlocked(true);
+      setPinError('');
+      setPinInput('');
+    } else {
+      setPinError('PIN Pengaman salah! Akses Pengaturan Database Cloud Neon ditolak.');
+    }
+  };
 
   const handleSaveAndInit = async (e) => {
     e.preventDefault();
@@ -144,235 +171,342 @@ export default function DatabaseSettingsModal({ isOpen, onClose, onConnectionUpd
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto print:hidden">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full overflow-hidden my-8">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-500/20 border border-blue-400/30 text-blue-300">
-              <Database className="w-6 h-6" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 backdrop-blur-sm p-4 overflow-y-auto print:hidden">
+      <div className="bg-[#fffdf8] rounded-2xl shadow-2xl border-2 border-amber-300/80 max-w-2xl w-full overflow-hidden my-8">
+        {/* Header Mewah */}
+        <div className="luxury-header-shimmer border-b border-amber-300/70 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-full bg-white/90 p-1 shadow-md border border-amber-400/60 flex items-center justify-center shrink-0">
+              <img
+                src="./logo-siapbosku.png"
+                onError={(e) => {
+                  e.currentTarget.src = './logo-siapbosku.gif';
+                }}
+                alt="Logo SiapBosKu"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-tight">Pengaturan Koneksi Database Cloud (Neon)</h2>
-              <p className="text-xs text-blue-200/80">
-                PostgreSQL Serverless untuk Sinkronisasi Tim Tata Usaha & Bendahara BOSP
+              <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-[#16233b]">
+                Pengaturan Koneksi Database Cloud (Neon)
+              </h2>
+              <p className="text-xs text-amber-900/80 font-medium">
+                PostgreSQL Serverless • Dilindungi PIN Keamanan Administrator
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-          {/* Status Koneksi Aktif */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <Server className="w-3.5 h-3.5 text-blue-600" />
-                Status Koneksi Saat Ini
-              </span>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                  connInfo.url
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : 'bg-amber-100 text-amber-800 border border-amber-300'
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    connInfo.url ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-                  }`}
-                />
-                {connInfo.url ? `Terhubung (${connInfo.source})` : 'Belum Dikonfigurasi'}
-              </span>
-            </div>
-            <div className="font-mono text-xs bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-700 break-all">
-              {maskConnectionUrl(connInfo.url)}
-            </div>
-            {cloudStatus?.counts && (
-              <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-                <div className="bg-white border border-slate-200/80 rounded-lg p-2">
-                  <div className="text-xs text-slate-500">Profil Sekolah</div>
-                  <div className="text-sm font-bold text-slate-800">{cloudStatus.counts.profil_count ?? 1} Data</div>
-                </div>
-                <div className="bg-white border border-slate-200/80 rounded-lg p-2">
-                  <div className="text-xs text-slate-500">Master Penyedia</div>
-                  <div className="text-sm font-bold text-blue-700">{cloudStatus.counts.penyedia_count ?? 0} Toko/CV</div>
-                </div>
-                <div className="bg-white border border-slate-200/80 rounded-lg p-2">
-                  <div className="text-xs text-slate-500">SPJ Tersinkron</div>
-                  <div className="text-sm font-bold text-emerald-700">{cloudStatus.counts.spj_count ?? 0} BPU</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Aturan Keamanan Kredensial */}
-          <div className="rounded-xl bg-blue-50/80 border border-blue-200 p-4 flex gap-3">
-            <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-blue-900 space-y-1 leading-relaxed">
-              <div className="font-bold text-blue-950">Keamanan Kredensial Terjamin (Zero Hardcoded Secret)</div>
-              <p>
-                Aplikasi ini berjalan secara statis (GitHub Pages). Kredensial <code className="font-mono bg-blue-100 px-1 py-0.5 rounded">NEON_DATABASE_URL</code>{' '}
-                <strong>tidak pernah</strong> disimpan di kode sumber GitHub, melainkan disimpan terenkripsi lokal di browser Anda
-                atau dibaca dari <code className="font-mono bg-blue-100 px-1 py-0.5 rounded">import.meta.env.VITE_NEON_DATABASE_URL</code> saat development lokal.
-              </p>
-            </div>
-          </div>
-
-          {/* Form Input Connection String */}
-          <form onSubmit={handleSaveAndInit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Masukkan / Perbarui Neon Connection String (PostgreSQL URL)
-              </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="password"
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
-                  placeholder="postgresql://neondb_owner:xxxx@ep-xxxx-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm font-mono rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
-                />
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Biarkan kosong jika hanya ingin menguji ulang & menginisialisasi tabel menggunakan koneksi aktif saat ini.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <label
-                className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
-                  storageMode === 'localStorage'
-                    ? 'border-blue-600 bg-blue-50/40'
-                    : 'border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="storageMode"
-                  value="localStorage"
-                  checked={storageMode === 'localStorage'}
-                  onChange={() => setStorageMode('localStorage')}
-                  className="mt-0.5"
-                />
-                <div className="text-xs">
-                  <div className="font-semibold text-slate-800 flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5 text-blue-600" />
-                    Simpan di LocalStorage (Terenkripsi)
-                  </div>
-                  <div className="text-slate-500 mt-0.5">Tetap tersimpan di perangkat ini saat tab ditutup.</div>
-                </div>
-              </label>
-
-              <label
-                className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
-                  storageMode === 'sessionStorage'
-                    ? 'border-blue-600 bg-blue-50/40'
-                    : 'border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="storageMode"
-                  value="sessionStorage"
-                  checked={storageMode === 'sessionStorage'}
-                  onChange={() => setStorageMode('sessionStorage')}
-                  className="mt-0.5"
-                />
-                <div className="text-xs">
-                  <div className="font-semibold text-slate-800 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    Simpan di SessionStorage (Sementara)
-                  </div>
-                  <div className="text-slate-500 mt-0.5">Otomatis terhapus saat browser/tab ditutup.</div>
-                </div>
-              </label>
-            </div>
-
-            {feedback && (
-              <div
-                className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 ${
-                  feedback.type === 'success'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                    : feedback.type === 'error'
-                    ? 'bg-red-50 border-red-200 text-red-800'
-                    : 'bg-slate-100 border-slate-300 text-slate-800'
-                }`}
-              >
-                {feedback.type === 'success' ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                )}
-                <div className="leading-relaxed">{feedback.message}</div>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div className="flex items-center gap-2">
+            {isPinUnlocked && (
               <button
                 type="button"
-                onClick={handleClearStorage}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold transition"
+                onClick={() => setIsPinUnlocked(false)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold border border-amber-300 transition"
+                title="Kunci Kembali"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                Hapus Kredensial Browser
+                <Lock className="w-3.5 h-3.5" />
+                Kunci
               </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-amber-200/40 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-              <div className="flex items-center gap-2">
+        {/* GERBANG PIN PENGAMAN ("siapbos123") */}
+        {!isPinUnlocked ? (
+          <div className="p-8 text-center space-y-6 bg-gradient-to-b from-[#fffdf9] to-[#faf3e0]">
+            <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-amber-100 via-yellow-50 to-amber-200 p-2 shadow-inner border-2 border-amber-400/70 flex items-center justify-center relative">
+              <img
+                src="./logo-siapbosku.png"
+                onError={(e) => {
+                  e.currentTarget.src = './logo-siapbosku.gif';
+                }}
+                alt="Logo SiapBosKu"
+                className="w-full h-full object-contain drop-shadow"
+              />
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#16233b] text-amber-300 border-2 border-amber-300 flex items-center justify-center shadow">
+                <Lock className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 max-w-md mx-auto">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                Area Terbatas Administrator & Bendahara
+              </div>
+              <h3 className="text-lg font-extrabold text-[#16233b]">
+                Masukkan PIN Pengaman Database Neon
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Untuk mencegah pihak yang tidak berwenang mengubah konfigurasi{' '}
+                <code className="font-mono bg-amber-100/80 px-1.5 py-0.5 rounded text-amber-950">
+                  NEON_DATABASE_URL
+                </code>
+                , silakan masukkan PIN pengaman terlebih dahulu.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyPin} className="max-w-sm mx-auto space-y-4">
+              <div className="relative">
+                <KeyRound className="w-4 h-4 text-amber-700 absolute left-3.5 top-3.5" />
+                <input
+                  type={showPin ? 'text' : 'password'}
+                  autoFocus
+                  value={pinInput}
+                  onChange={(e) => {
+                    setPinInput(e.target.value);
+                    if (pinError) setPinError('');
+                  }}
+                  placeholder="Masukkan PIN Pengaman..."
+                  className="w-full pl-10 pr-10 py-3 text-sm font-mono font-bold tracking-widest text-center rounded-xl border-2 border-amber-300 bg-white focus:border-amber-600 focus:ring-4 focus:ring-amber-500/15 outline-none transition"
+                />
                 <button
                   type="button"
-                  onClick={() => setShowSql(!showSql)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition"
+                  onClick={() => setShowPin(!showPin)}
+                  className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700"
                 >
-                  {showSql ? 'Sembunyikan Skrip SQL' : 'Lihat Skrip DDL SQL'}
+                  {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {pinError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold flex items-center justify-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{pinError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition"
+                >
+                  Batal
                 </button>
                 <button
                   type="submit"
-                  disabled={testing}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm transition"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#16233b] via-[#1f3154] to-[#16233b] hover:from-[#1f3154] hover:to-[#29406b] text-amber-200 border border-amber-400/50 text-xs font-bold shadow-md transition"
                 >
-                  {testing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Menghubungkan & Inisialisasi Tabel...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Simpan & Inisialisasi Tabel Neon
-                    </>
-                  )}
+                  <Unlock className="w-4 h-4 text-amber-400" />
+                  Buka Pengaturan Database
                 </button>
               </div>
+            </form>
+          </div>
+        ) : (
+          /* ISI PENGATURAN KONEKSI DATABASE NEON (SETELAH PIN TERBUKA) */
+          <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+            {/* Status Koneksi Aktif */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                  <Server className="w-3.5 h-3.5 text-amber-700" />
+                  Status Koneksi Saat Ini
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    connInfo.url
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-100 text-amber-800 border border-amber-300'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      connInfo.url ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                    }`}
+                  />
+                  {connInfo.url ? `Terhubung (${connInfo.source})` : 'Belum Dikonfigurasi'}
+                </span>
+              </div>
+              <div className="font-mono text-xs bg-white border border-amber-200 rounded-lg px-3 py-2 text-slate-700 break-all">
+                {maskConnectionUrl(connInfo.url)}
+              </div>
+              {cloudStatus?.counts && (
+                <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                  <div className="bg-white border border-amber-200/80 rounded-lg p-2">
+                    <div className="text-xs text-slate-500">Profil Sekolah</div>
+                    <div className="text-sm font-bold text-slate-800">{cloudStatus.counts.profil_count ?? 1} Data</div>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 rounded-lg p-2">
+                    <div className="text-xs text-slate-500">Master Penyedia</div>
+                    <div className="text-sm font-bold text-amber-800">{cloudStatus.counts.penyedia_count ?? 0} Toko/CV</div>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 rounded-lg p-2">
+                    <div className="text-xs text-slate-500">SPJ Tersinkron</div>
+                    <div className="text-sm font-bold text-emerald-700">{cloudStatus.counts.spj_count ?? 0} BPU</div>
+                  </div>
+                </div>
+              )}
             </div>
-          </form>
 
-          {/* Pratinjau Skrip SQL DDL */}
-          {showSql && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900 text-slate-100 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2 bg-slate-800/80 border-b border-slate-700 text-xs">
-                <span className="font-mono text-slate-300">sql/neon_schema.sql (Auto-Executed)</span>
+            {/* Aturan Keamanan Kredensial */}
+            <div className="rounded-xl bg-amber-50/80 border border-amber-200 p-4 flex gap-3">
+              <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-xs text-amber-950 space-y-1 leading-relaxed">
+                <div className="font-bold">Keamanan Kredensial Terjamin (Zero Hardcoded Secret + PIN Guard)</div>
+                <p>
+                  Kredensial <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">NEON_DATABASE_URL</code>{' '}
+                  <strong>tidak pernah</strong> disimpan di kode sumber GitHub, melainkan disimpan terenkripsi lokal di browser Anda
+                  atau dibaca dari <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">import.meta.env.VITE_NEON_DATABASE_URL</code>.
+                </p>
+              </div>
+            </div>
+
+            {/* Form Input Connection String */}
+            <form onSubmit={handleSaveAndInit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Masukkan / Perbarui Neon Connection String (PostgreSQL URL)
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="password"
+                    value={inputUrl}
+                    onChange={(e) => setInputUrl(e.target.value)}
+                    placeholder="postgresql://neondb_owner:xxxx@ep-xxxx-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm font-mono rounded-xl border border-slate-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 outline-none transition bg-white"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Biarkan kosong jika hanya ingin menguji ulang & menginisialisasi tabel menggunakan koneksi aktif saat ini.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
+                    storageMode === 'localStorage'
+                      ? 'border-amber-600 bg-amber-50/50'
+                      : 'border-slate-200 hover:bg-slate-50 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="storageMode"
+                    value="localStorage"
+                    checked={storageMode === 'localStorage'}
+                    onChange={() => setStorageMode('localStorage')}
+                    className="mt-0.5"
+                  />
+                  <div className="text-xs">
+                    <div className="font-semibold text-slate-800 flex items-center gap-1">
+                      <Lock className="w-3.5 h-3.5 text-amber-700" />
+                      Simpan di LocalStorage (Terenkripsi)
+                    </div>
+                    <div className="text-slate-500 mt-0.5">Tetap tersimpan di perangkat ini saat tab ditutup.</div>
+                  </div>
+                </label>
+
+                <label
+                  className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
+                    storageMode === 'sessionStorage'
+                      ? 'border-amber-600 bg-amber-50/50'
+                      : 'border-slate-200 hover:bg-slate-50 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="storageMode"
+                    value="sessionStorage"
+                    checked={storageMode === 'sessionStorage'}
+                    onChange={() => setStorageMode('sessionStorage')}
+                    className="mt-0.5"
+                  />
+                  <div className="text-xs">
+                    <div className="font-semibold text-slate-800 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      Simpan di SessionStorage (Sementara)
+                    </div>
+                    <div className="text-slate-500 mt-0.5">Otomatis terhapus saat browser/tab ditutup.</div>
+                  </div>
+                </label>
+              </div>
+
+              {feedback && (
+                <div
+                  className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : feedback.type === 'error'
+                      ? 'bg-red-50 border-red-200 text-red-800'
+                      : 'bg-slate-100 border-slate-300 text-slate-800'
+                  }`}
+                >
+                  {feedback.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="leading-relaxed">{feedback.message}</div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={handleCopySql}
-                  className="inline-flex items-center gap-1 text-blue-300 hover:text-white font-semibold"
+                  onClick={handleClearStorage}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold transition"
                 >
-                  {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedSql ? 'Tersalin!' : 'Salin SQL'}
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Hapus Kredensial Browser
                 </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSql(!showSql)}
+                    className="px-3.5 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition bg-white"
+                  >
+                    {showSql ? 'Sembunyikan Skrip SQL' : 'Lihat Skrip DDL SQL'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={testing}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#16233b] to-[#24395e] hover:from-[#1e3050] hover:to-[#2d4775] disabled:opacity-60 text-amber-200 border border-amber-400/50 text-xs font-bold shadow-sm transition"
+                  >
+                    {testing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Menghubungkan & Inisialisasi Tabel...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        Simpan & Inisialisasi Tabel Neon
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-              <pre className="p-4 text-[11px] font-mono overflow-x-auto text-emerald-300 leading-relaxed">
-                {SQL_SCHEMA_PREVIEW}
-              </pre>
-            </div>
-          )}
-        </div>
+            </form>
+
+            {/* Pratinjau Skrip SQL DDL */}
+            {showSql && (
+              <div className="rounded-xl border border-slate-800 bg-slate-900 text-slate-100 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-slate-800/80 border-b border-slate-700 text-xs">
+                  <span className="font-mono text-slate-300">sql/neon_schema.sql (Auto-Executed)</span>
+                  <button
+                    type="button"
+                    onClick={handleCopySql}
+                    className="inline-flex items-center gap-1 text-amber-300 hover:text-white font-semibold"
+                  >
+                    {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedSql ? 'Tersalin!' : 'Salin SQL'}
+                  </button>
+                </div>
+                <pre className="p-4 text-[11px] font-mono overflow-x-auto text-emerald-300 leading-relaxed">
+                  {SQL_SCHEMA_PREVIEW}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
