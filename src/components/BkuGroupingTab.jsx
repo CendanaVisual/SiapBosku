@@ -490,7 +490,7 @@ export default function BkuGroupingTab({
 
       {/* Floating Bar Gabung Transaksi (Muncul saat pengguna mencentang >= 1 item) */}
       {checkedItems.length > 0 && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl rounded-2xl bg-slate-900 text-white shadow-2xl border border-blue-500/40 px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 print:hidden">
+        <div className="fixed bottom-14 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-4xl rounded-2xl bg-slate-900 text-white shadow-2xl border border-amber-400/60 px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 print:hidden">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-blue-600 text-white">
               <Layers className="w-5 h-5" />

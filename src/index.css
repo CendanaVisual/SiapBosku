@@ -18,7 +18,7 @@
 }
 
 /* ============================================================================
-   HEADER WARNA SOFT CHAMPAGNE-GOLD & BERKILAU TERUS-MENERUS (LUXURY SHIMMER)
+   HEADER & SIDEBAR WARNA SOFT CHAMPAGNE-GOLD & BERKILAU TERUS-MENERUS
    ============================================================================ */
 @keyframes luxuryShimmerSweep {
   0% {
@@ -85,8 +85,40 @@
   animation: continuousLightBeam 4.5s infinite;
 }
 
+.luxury-sidebar-card {
+  background: linear-gradient(
+    165deg,
+    rgba(255, 253, 248, 0.97) 0%,
+    rgba(250, 240, 214, 0.96) 50%,
+    rgba(255, 252, 242, 0.98) 100%
+  );
+  backdrop-filter: blur(12px);
+}
+
 .logo-gleam-effect {
   animation: logoGoldenPulse 3.8s ease-in-out infinite;
+}
+
+/* ============================================================================
+   ANIMASI RUNNING TEXT (MARQUEE) BAWAH — KECEPATAN NYAMAN DIBACA
+   ============================================================================ */
+@keyframes runningTextMarquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.running-text-track {
+  display: flex;
+  width: max-content;
+  animation: runningTextMarquee 36s linear infinite;
+}
+
+.running-text-track:hover {
+  animation-play-state: paused;
 }
 
 /* ============================================================================
