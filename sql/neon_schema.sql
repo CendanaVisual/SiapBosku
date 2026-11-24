@@ -1,9 +1,10 @@
 -- ============================================================================
 -- SKEMA DATABASE CLOUD NEON (PostgreSQL) — SIAPBOSKU (SPJ ARKAS 4)
--- Dapat dijalankan langsung di Neon SQL Editor atau otomatis melalui aplikasi
+-- Seluruh data aplikasi (Profil, BKU ARKAS, Penyedia, SPJ Pelengkap, Riwayat)
+-- dimuat langsung dari database Cloud Neon
 -- ============================================================================
 
--- 1. Tabel Profil Sekolah
+-- 1. Tabel Profil Sekolah (Username Login menggunakan NPSN: 50103069)
 CREATE TABLE IF NOT EXISTS profil_sekolah (
   id SERIAL PRIMARY KEY,
   nama_sekolah VARCHAR(200) NOT NULL,
@@ -25,12 +26,37 @@ CREATE TABLE IF NOT EXISTS profil_sekolah (
   nip_bendahara VARCHAR(50),
   nama_pemeriksa VARCHAR(150),
   nip_pemeriksa VARCHAR(50),
-  tahun_anggaran INTEGER NOT NULL DEFAULT 2026,
+  tahun_anggaran INTEGER NOT NULL DEFAULT 2027,
   kota_ttd VARCHAR(100) DEFAULT 'Denpasar',
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Tabel Master Data Penyedia / Toko / CV
+-- 2. Tabel Transaksi BKU ARKAS (Disimpan di Cloud Neon agar seluruh browser memuat data yang sama)
+CREATE TABLE IF NOT EXISTS bku_arkas (
+  id SERIAL PRIMARY KEY,
+  id_item VARCHAR(100) UNIQUE NOT NULL,
+  no_bpu VARCHAR(100) NOT NULL,
+  tanggal_transaksi DATE NOT NULL,
+  kode_rekening VARCHAR(100) NOT NULL,
+  nama_rekening TEXT,
+  kode_kegiatan VARCHAR(100),
+  nama_kegiatan TEXT,
+  uraian TEXT NOT NULL,
+  volume NUMERIC(12, 2) DEFAULT 1,
+  satuan VARCHAR(50) DEFAULT 'Paket',
+  harga_satuan NUMERIC(15, 2) DEFAULT 0,
+  nominal NUMERIC(15, 2) DEFAULT 0,
+  ppn NUMERIC(15, 2) DEFAULT 0,
+  pph21 NUMERIC(15, 2) DEFAULT 0,
+  pph22 NUMERIC(15, 2) DEFAULT 0,
+  pph23 NUMERIC(15, 2) DEFAULT 0,
+  pajak_daerah NUMERIC(15, 2) DEFAULT 0,
+  sumber_dana VARCHAR(100) DEFAULT 'BOSP Reguler',
+  sumber_file VARCHAR(200) DEFAULT 'Database Cloud Neon',
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Tabel Master Data Penyedia / Toko / CV
 CREATE TABLE IF NOT EXISTS data_penyedia (
   id_penyedia SERIAL PRIMARY KEY,
   nama_toko VARCHAR(200) NOT NULL,
@@ -46,7 +72,7 @@ CREATE TABLE IF NOT EXISTS data_penyedia (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Tabel SPJ Pelengkap (Sinkronisasi Nomor BPU ARKAS)
+-- 4. Tabel SPJ Pelengkap (Sinkronisasi Nomor BPU ARKAS)
 CREATE TABLE IF NOT EXISTS spj_pelengkap (
   id SERIAL PRIMARY KEY,
   no_bpu VARCHAR(100) UNIQUE NOT NULL,
@@ -74,7 +100,7 @@ CREATE TABLE IF NOT EXISTS spj_pelengkap (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Tabel Riwayat Cetak Dokumen SPJ
+-- 5. Tabel Riwayat Cetak Dokumen SPJ
 CREATE TABLE IF NOT EXISTS riwayat_cetak (
   id SERIAL PRIMARY KEY,
   no_bpu VARCHAR(100) NOT NULL,
@@ -85,6 +111,6 @@ CREATE TABLE IF NOT EXISTS riwayat_cetak (
   waktu_cetak TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indeks untuk mempercepat pencarian & sinkronisasi Nomor BPU
+CREATE INDEX IF NOT EXISTS idx_bku_arkas_no_bpu ON bku_arkas(no_bpu);
 CREATE INDEX IF NOT EXISTS idx_spj_pelengkap_no_bpu ON spj_pelengkap(no_bpu);
 CREATE INDEX IF NOT EXISTS idx_riwayat_cetak_no_bpu ON riwayat_cetak(no_bpu);

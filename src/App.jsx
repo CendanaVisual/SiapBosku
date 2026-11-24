@@ -13,6 +13,8 @@ import {
   PanelLeftOpen,
   ChevronRight,
   Volume2,
+  LogOut,
+  CloudDownload,
 } from 'lucide-react';
 import {
   loadSqliteFromArrayBuffer,
@@ -25,11 +27,13 @@ import {
   initializeNeonSchema,
   fetchAllCloudData,
   saveProfilSekolah,
+  syncExtractedBkuToNeon,
 } from './services/neonClient';
 import BalineseOrnamentFrame, {
   HeaderBaliCarvingCorner,
   SidebarCarvingDivider,
 } from './components/BalineseOrnamentFrame';
+import LoginWindow from './components/LoginWindow';
 import DatabaseSettingsModal from './components/DatabaseSettingsModal';
 import SqliteInspectorTab from './components/SqliteInspectorTab';
 import BkuGroupingTab from './components/BkuGroupingTab';
@@ -37,22 +41,28 @@ import MasterDataTab from './components/MasterDataTab';
 import SpjFormModal from './components/SpjFormModal';
 import PrintPreviewTab from './components/PrintPreviewTab';
 
+const AUTH_SESSION_KEY = 'siapbosku_auth_npsn_v1';
+
 const RUNNING_TEXT_MESSAGE =
   'Rahajeng Rawuh & selamat datang di SiapBosKu — Layanan Administrasi & Cetak SPJ ARKAS 4 SD Negeri 7 Pedungan. Mari dukung tata kelola Dana BOSP Reguler Tahun Anggaran 2027 yang rapi, transparan, dan tepat waktu';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('SQLITE_INSPECTOR');
+  // State Autentikasi Login (Username NPSN: 50103069, Password: siapbos123)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem(AUTH_SESSION_KEY) === '50103069';
+  });
+
+  const [activeTab, setActiveTab] = useState('BKU_GROUPING');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDbModalOpen, setIsDbModalOpen] = useState(false);
 
-  // State SQLite ARKAS (Client-Side WebAssembly sql.js)
+  // State SQLite ARKAS (Client-Side WebAssembly sql.js untuk Table Inspector)
   const [sqliteDb, setSqliteDb] = useState(null);
   const [sqliteFileInfo, setSqliteFileInfo] = useState(null);
   const [tables, setTables] = useState([]);
-  const [bkuList, setBkuList] = useState([]);
   const [loadingSqlite, setLoadingSqlite] = useState(false);
 
-  // State Cloud Neon PostgreSQL
+  // State Cloud Neon PostgreSQL (Sumber Utama Seluruh Data Web)
   const [cloudStatus, setCloudStatus] = useState({
     connected: false,
     loading: false,
@@ -62,6 +72,7 @@ export default function App() {
     counts: null,
   });
   const [profilSekolah, setProfilSekolah] = useState(null);
+  const [bkuList, setBkuList] = useState([]);
   const [penyediaList, setPenyediaList] = useState([]);
   const [spjMap, setSpjMap] = useState({});
 
@@ -70,7 +81,7 @@ export default function App() {
   const [activeGroupedDraft, setActiveGroupedDraft] = useState(null);
   const [selectedPrintBpu, setSelectedPrintBpu] = useState('BPU-01');
 
-  // Fungsi sinkronisasi data dari Cloud Neon
+  // Fungsi utama: Memuat SELURUH data web langsung dari Database Cloud Neon
   const refreshNeonData = useCallback(async () => {
     const conn = getActiveNeonConnectionInfo();
     if (!conn.url) {
@@ -90,8 +101,12 @@ export default function App() {
       const initRes = await initializeNeonSchema();
       const cloudData = await fetchAllCloudData();
       setProfilSekolah(cloudData.profil);
-      setPenyediaList(cloudData.penyediaList);
-      setSpjMap(cloudData.spjMap);
+      setBkuList(cloudData.bkuList || []);
+      setPenyediaList(cloudData.penyediaList || []);
+      setSpjMap(cloudData.spjMap || {});
+      if (cloudData.bkuList?.length > 0) {
+        setSelectedPrintBpu((prev) => prev || cloudData.bkuList[0].no_bpu);
+      }
       setCloudStatus({
         connected: true,
         loading: false,
@@ -112,10 +127,9 @@ export default function App() {
     }
   }, []);
 
-  // Fungsi memuat instance database SQLite ke state aplikasi
-  const applySqliteDatabase = useCallback((dbInstance, fileName, fileSize = 0) => {
+  // Fungsi memuat instance database SQLite ke Table Inspector
+  const applySqliteInspectorOnly = useCallback((dbInstance, fileName, fileSize = 0) => {
     const allTables = getAllSqliteTables(dbInstance);
-    const extractedBku = extractBkuTransactions(dbInstance);
     setSqliteDb(dbInstance);
     setSqliteFileInfo({
       name: fileName,
@@ -123,48 +137,69 @@ export default function App() {
       loadedAt: new Date().toLocaleTimeString('id-ID'),
     });
     setTables(allTables);
-    setBkuList(extractedBku);
-    if (extractedBku.length > 0) {
-      setSelectedPrintBpu(extractedBku[0].no_bpu);
-    }
   }, []);
 
-  // Muat File SQLite asli dari Drag & Drop / File Picker
+  // Saat pengguna mengunggah file SQLite ARKAS (.db) baru di Modul 1,
+  // ekstrak BKU dan langsung simpan/sinkronkan ke tabel bku_arkas di Cloud Neon!
   const handleLoadFileBuffer = async (arrayBuffer, fileName, fileSize) => {
     setLoadingSqlite(true);
     try {
       const db = await loadSqliteFromArrayBuffer(arrayBuffer);
-      applySqliteDatabase(db, fileName, fileSize);
+      applySqliteInspectorOnly(db, fileName, fileSize);
+      const extractedBku = extractBkuTransactions(db);
+      if (extractedBku.length > 0) {
+        await syncExtractedBkuToNeon(extractedBku, fileName, true);
+        await refreshNeonData();
+      }
     } catch (err) {
-      alert(`Gagal membaca file SQLite ARKAS: ${err.message}`);
+      alert(`Gagal membaca atau menyinkronkan file SQLite ARKAS ke Neon: ${err.message}`);
     } finally {
       setLoadingSqlite(false);
     }
   };
 
-  // Muat Database Simulasi ARKAS 4
-  const handleLoadDemoDatabase = useCallback(async () => {
-    setLoadingSqlite(true);
-    try {
-      const db = await createDemoArkasDatabase();
-      applySqliteDatabase(db, 'arkas_4_simulasi_sdn7.db (Memori Browser)', 65536);
-    } catch (err) {
-      console.error('Gagal memuat simulasi SQLite:', err);
-    } finally {
-      setLoadingSqlite(false);
-    }
-  }, [applySqliteDatabase]);
+  // Muat Database Simulasi SQLite untuk Table Inspector & sinkronkan ke Neon jika tabel bku_arkas kosong
+  const handleLoadDemoDatabase = useCallback(
+    async (syncToNeon = false) => {
+      setLoadingSqlite(true);
+      try {
+        const db = await createDemoArkasDatabase();
+        applySqliteInspectorOnly(db, 'arkas_4_cloud_neon_sdn7.db', 65536);
+        if (syncToNeon) {
+          const extractedBku = extractBkuTransactions(db);
+          await syncExtractedBkuToNeon(extractedBku, 'Simulasi ARKAS 4 (Cloud Neon)', true);
+          await refreshNeonData();
+        }
+      } catch (err) {
+        console.error('Gagal memuat simulasi SQLite:', err);
+      } finally {
+        setLoadingSqlite(false);
+      }
+    },
+    [applySqliteInspectorOnly, refreshNeonData]
+  );
 
-  // Inisialisasi saat aplikasi dibuka
+  // Inisialisasi saat aplikasi dibuka: langsung muat seluruh data dari Cloud Neon
   useEffect(() => {
-    handleLoadDemoDatabase();
     refreshNeonData();
-  }, [handleLoadDemoDatabase, refreshNeonData]);
+    handleLoadDemoDatabase(false);
+  }, [refreshNeonData, handleLoadDemoDatabase]);
+
+  const handleLoginSuccess = ({ username }) => {
+    sessionStorage.setItem(AUTH_SESSION_KEY, username);
+    setIsAuthenticated(true);
+    refreshNeonData();
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+    setIsAuthenticated(false);
+  };
 
   // Impor profil sekolah dari SQLite ARKAS ke Cloud Neon
   const handleImportSchoolProfile = async (detected) => {
     try {
-      const merged = { ...(profilSekolah || {}), ...detected };
+      const merged = { ...(profilSekolah || {}), ...detected, npsn: '50103069' };
       await saveProfilSekolah(merged);
       await refreshNeonData();
       alert(`Profil sekolah "${detected.nama_sekolah}" berhasil disinkronkan ke Cloud Neon!`);
@@ -190,12 +225,22 @@ export default function App() {
     setActiveTab('PRINT_PREVIEW');
   };
 
+  // TAMPILKAN JENDELA LOGIN MEWAH JIKA BELUM LOGIN
+  if (!isAuthenticated) {
+    return (
+      <LoginWindow
+        onLoginSuccess={handleLoginSuccess}
+        cloudConnected={cloudStatus.connected}
+      />
+    );
+  }
+
   const navItems = [
     {
       id: 'SQLITE_INSPECTOR',
       stepNumber: '01',
       title: 'Pembaca SQLite & Table Inspector',
-      subtitle: 'Baca file .db ARKAS 4 di memori browser',
+      subtitle: 'Unggah .db ARKAS & sinkron ke Neon',
       badge: `${tables.length} Tabel`,
       icon: FileSpreadsheet,
       protectedPin: true,
@@ -204,8 +249,8 @@ export default function App() {
       id: 'BKU_GROUPING',
       stepNumber: '02',
       title: 'Pengelompokan & Pelengkapan SPJ',
-      subtitle: 'Filter BKU, gabung item, & hitung pajak',
-      badge: `${bkuList.length} BKU`,
+      subtitle: 'Data BKU langsung dari Cloud Neon',
+      badge: `${bkuList.length} BKU Neon`,
       icon: Layers,
     },
     {
@@ -289,8 +334,9 @@ export default function App() {
                 <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-[#16233b] text-amber-300 border border-amber-400/60 shadow-sm">
                   SIAPBOSKU • ARKAS 4
                 </span>
-                <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-950 border border-amber-500/40">
-                  SQLite WASM + Cloud Neon PostgreSQL
+                <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-900 border border-emerald-500/40">
+                  <CloudDownload className="w-3 h-3 text-emerald-700" />
+                  100% Data Cloud Neon Aktif
                 </span>
               </div>
               <h1
@@ -301,29 +347,27 @@ export default function App() {
               </h1>
               <p className="text-xs font-semibold text-amber-950/85">
                 {profilSekolah?.nama_sekolah || 'SD NEGERI 7 PEDUNGAN'} • NPSN:{' '}
-                {profilSekolah?.npsn || '50103123'} • Tahun Anggaran {profilSekolah?.tahun_anggaran || 2026}
+                {profilSekolah?.npsn || '50103069'} • Tahun Anggaran {profilSekolah?.tahun_anggaran || 2027}
               </p>
             </div>
           </div>
 
-          {/* Kanan: Indikator & Tombol Pengaturan Koneksi Database Neon (Dilindungi PIN) */}
-          <div className="flex items-center gap-2.5">
-            {cloudStatus.connected && (
-              <button
-                type="button"
-                onClick={refreshNeonData}
-                disabled={cloudStatus.loading}
-                className="p-2.5 rounded-xl bg-white/85 hover:bg-white text-[#16233b] border border-amber-400/70 shadow-sm transition"
-                title="Sinkronkan ulang dengan Cloud Neon"
-              >
-                <RefreshCw className={`w-4 h-4 ${cloudStatus.loading ? 'animate-spin' : ''}`} />
-              </button>
-            )}
+          {/* Kanan: Indikator Neon + Tombol Pengaturan Database + Tombol Keluar (Logout) */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={refreshNeonData}
+              disabled={cloudStatus.loading}
+              className="p-2.5 rounded-xl bg-white/85 hover:bg-white text-[#16233b] border border-amber-400/70 shadow-sm transition"
+              title="Muat Ulang Seluruh Data dari Cloud Neon"
+            >
+              <RefreshCw className={`w-4 h-4 ${cloudStatus.loading ? 'animate-spin' : ''}`} />
+            </button>
 
             <button
               type="button"
               onClick={() => setIsDbModalOpen(true)}
-              className={`inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold border shadow-sm transition ${
+              className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border shadow-sm transition ${
                 cloudStatus.connected
                   ? 'bg-[#16233b] hover:bg-[#223559] border-amber-400/70 text-amber-200'
                   : 'bg-amber-900 hover:bg-amber-950 border-amber-300 text-amber-100'
@@ -337,10 +381,22 @@ export default function App() {
                       cloudStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
                     }`}
                   />
-                  <span>{cloudStatus.connected ? 'Neon Cloud Aktif' : 'Atur Koneksi Neon'}</span>
-                  <Lock className="w-3 h-3 text-amber-400/90 ml-0.5" title="Dilindungi PIN Pengaman" />
+                  <span className="hidden sm:inline">
+                    {cloudStatus.connected ? 'Neon Cloud Terhubung' : 'Koneksi Neon'}
+                  </span>
+                  <Lock className="w-3 h-3 text-amber-400/90" title="Dilindungi PIN Pengaman" />
                 </div>
               </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/85 hover:bg-red-50 text-red-700 border border-red-300/80 shadow-sm text-xs font-bold transition"
+              title="Keluar dari Sesi Login (Logout)"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Keluar</span>
             </button>
           </div>
         </div>
@@ -376,7 +432,7 @@ export default function App() {
                   >
                     Menu Utama SPJ
                   </h2>
-                  <p className="text-[11px] text-amber-100/70">Navigasi Modul SiapBosKu</p>
+                  <p className="text-[11px] text-amber-100/70">NPSN Login: 50103069</p>
                 </div>
               </div>
               <button
@@ -481,29 +537,25 @@ export default function App() {
               <SidebarCarvingDivider />
             </div>
 
-            {/* Ringkasan Status di Bawah Sidebar */}
+            {/* Ringkasan Status Cloud Neon di Bawah Sidebar */}
             <div className="p-4 m-3.5 mt-1 rounded-2xl bg-gradient-to-br from-amber-50 via-yellow-50/70 to-amber-100/60 border border-amber-300/80 text-xs space-y-2">
               <div className="flex items-center justify-between font-bold text-[#16233b]">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-amber-700" />
-                  Status Sistem
+                  Sumber Data Utama
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold">
-                  PIN Guard Aktif
+                  Cloud Neon
                 </span>
               </div>
               <div className="text-[11px] text-slate-600 leading-relaxed">
-                File SQLite:{' '}
-                <strong className="text-[#16233b]">
-                  {sqliteFileInfo ? `${tables.length} Tabel (${bkuList.length} BKU)` : 'Siap Dimuat'}
-                </strong>
+                Transaksi BKU Neon:{' '}
+                <strong className="text-[#16233b]">{bkuList.length} Item Belanja</strong>
               </div>
               <div className="text-[11px] text-slate-600">
-                Database Cloud:{' '}
-                <strong className={cloudStatus.connected ? 'text-emerald-700' : 'text-amber-700'}>
-                  {cloudStatus.connected
-                    ? `Neon Terhubung (${Object.keys(spjMap).length} SPJ)`
-                    : 'Mode Lokal / Belum Terhubung'}
+                SPJ & Penyedia Neon:{' '}
+                <strong className="text-emerald-700">
+                  {Object.keys(spjMap).length} SPJ • {penyediaList.length} Toko
                 </strong>
               </div>
             </div>
@@ -527,7 +579,7 @@ export default function App() {
               )}
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                  Modul {activeNavMeta.stepNumber} dari 04
+                  Modul {activeNavMeta.stepNumber} dari 04 • Terhubung Otomatis ke Cloud Neon
                 </div>
                 <div className="text-sm font-extrabold text-[#16233b]">{activeNavMeta.title}</div>
               </div>
@@ -535,10 +587,10 @@ export default function App() {
             <div className="text-xs text-slate-500 hidden sm:block">{activeNavMeta.subtitle}</div>
           </div>
 
-          {loadingSqlite && (
+          {(loadingSqlite || cloudStatus.loading) && (
             <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs font-semibold flex items-center gap-2.5 print:hidden">
               <RefreshCw className="w-4 h-4 animate-spin text-amber-700" />
-              Memproses database SQLite ARKAS di memori WebAssembly browser...
+              Menyinkronkan data dari database Cloud Neon PostgreSQL...
             </div>
           )}
 
@@ -549,7 +601,7 @@ export default function App() {
               tables={tables}
               bkuList={bkuList}
               onLoadFileBuffer={handleLoadFileBuffer}
-              onLoadDemoDatabase={handleLoadDemoDatabase}
+              onLoadDemoDatabase={() => handleLoadDemoDatabase(true)}
               onImportSchoolProfile={handleImportSchoolProfile}
               onGoToBkuTab={() => setActiveTab('BKU_GROUPING')}
             />
@@ -592,13 +644,11 @@ export default function App() {
       {/* RUNNING TEXT (MARQUEE) DI BAGIAN BAWAH DENGAN KECEPATAN NYAMAN DIBACA */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-gradient-to-r from-[#16233b] via-[#1f3154] to-[#16233b] text-amber-100 border-t-2 border-amber-400/85 shadow-2xl print:hidden">
         <div className="max-w-7xl mx-auto flex items-center overflow-hidden h-10">
-          {/* Label Badge Kiri Running Text */}
           <div className="bg-gradient-to-r from-amber-500 to-amber-400 text-[#16233b] px-3.5 h-full flex items-center gap-1.5 font-extrabold text-[11px] uppercase tracking-wider shrink-0 z-10 shadow-md">
             <Volume2 className="w-3.5 h-3.5" />
             <span>SiapBosKu Info</span>
           </div>
 
-          {/* Jalur Running Text */}
           <div className="flex-1 overflow-hidden relative h-full flex items-center">
             <div className="running-text-track text-xs sm:text-sm font-medium tracking-wide text-amber-100">
               <span className="px-8 whitespace-nowrap flex items-center gap-4">

@@ -327,10 +327,14 @@ export default function DatabaseSettingsModal({ isOpen, onClose, onConnectionUpd
                 {maskConnectionUrl(connInfo.url)}
               </div>
               {cloudStatus?.counts && (
-                <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-center">
                   <div className="bg-white border border-amber-200/80 rounded-lg p-2">
                     <div className="text-xs text-slate-500">Profil Sekolah</div>
                     <div className="text-sm font-bold text-slate-800">{cloudStatus.counts.profil_count ?? 1} Data</div>
+                  </div>
+                  <div className="bg-white border border-amber-200/80 rounded-lg p-2">
+                    <div className="text-xs text-slate-500">BKU ARKAS Neon</div>
+                    <div className="text-sm font-bold text-blue-800">{cloudStatus.counts.bku_count ?? 0} Baris</div>
                   </div>
                   <div className="bg-white border border-amber-200/80 rounded-lg p-2">
                     <div className="text-xs text-slate-500">Master Penyedia</div>

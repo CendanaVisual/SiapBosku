@@ -35,7 +35,7 @@ const EMPTY_PENYEDIA = {
 export default function MasterDataTab({ profil, penyediaList, onRefreshCloud }) {
   const [formProfil, setFormProfil] = useState({
     nama_sekolah: 'SD NEGERI 7 PEDUNGAN',
-    npsn: '50103123',
+    npsn: '50103069',
     alamat: 'Jl. Pulau Saelus No. 45, Pedungan',
     kelurahan_desa: 'Pedungan',
     kecamatan: 'Denpasar Selatan',
@@ -52,7 +52,7 @@ export default function MasterDataTab({ profil, penyediaList, onRefreshCloud }) 
     nip_bendahara: '19860819 201101 2 012',
     nama_pemeriksa: 'I Made Arya Wibawa, S.Kom.',
     nip_pemeriksa: '19900215 201903 1 004',
-    tahun_anggaran: 2026,
+    tahun_anggaran: 2027,
     kota_ttd: 'Denpasar',
   });
 

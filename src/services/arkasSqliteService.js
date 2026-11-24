@@ -345,8 +345,8 @@ export async function createDemoArkasDatabase() {
     );
 
     INSERT INTO sekolah VALUES (
-      '50103123-SDN7-2026',
-      '50103123',
+      '50103069-SDN7-2027',
+      '50103069',
       'SD NEGERI 7 PEDUNGAN',
       'Jl. Pulau Saelus No. 45, Pedungan',
       'Denpasar Selatan',

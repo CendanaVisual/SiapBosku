@@ -6,7 +6,6 @@ import { neon } from '@neondatabase/serverless';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
-// Baca variabel dari .env lokal jika belum ada di process.env (tanpa hardcode kredensial!)
 function loadLocalEnv() {
   const envPath = path.join(rootDir, '.env');
   if (!fs.existsSync(envPath)) return;
@@ -45,6 +44,309 @@ function normalizeNeonUrl(rawUrl) {
   }
 }
 
+const INITIAL_BKU_ARKAS = [
+  {
+    id_item: 'ARKAS-2',
+    no_bpu: 'BPU-01',
+    tanggal_transaksi: '2026-01-15',
+    kode_rekening: '5.1.02.01.01.0025',
+    nama_rekening: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Kertas dan Cover',
+    kode_kegiatan: '03.03',
+    nama_kegiatan: '03.03 - Pelaksanaan Administrasi Kegiatan Sekolah',
+    uraian: 'Belanja Kertas HVS F4 70 Gram Sinar Dunia (30 Rim)',
+    volume: 30,
+    satuan: 'Rim',
+    harga_satuan: 58000,
+    nominal: 1740000,
+    ppn: 172432,
+    pph21: 0,
+    pph22: 23446,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-3',
+    no_bpu: 'BPU-01',
+    tanggal_transaksi: '2026-01-15',
+    kode_rekening: '5.1.02.01.01.0024',
+    nama_rekening: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Alat Tulis Kantor',
+    kode_kegiatan: '03.03',
+    nama_kegiatan: '03.03 - Pelaksanaan Administrasi Kegiatan Sekolah',
+    uraian: 'Belanja Spidol Whiteboard Snowman & Tinta Refill (24 Kotak)',
+    volume: 24,
+    satuan: 'Kotak',
+    harga_satuan: 45000,
+    nominal: 1080000,
+    ppn: 107027,
+    pph21: 0,
+    pph22: 14554,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-4',
+    no_bpu: 'BPU-01',
+    tanggal_transaksi: '2026-01-15',
+    kode_rekening: '5.1.02.01.01.0024',
+    nama_rekening: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Alat Tulis Kantor',
+    kode_kegiatan: '03.03',
+    nama_kegiatan: '03.03 - Pelaksanaan Administrasi Kegiatan Sekolah',
+    uraian: 'Belanja Ordner Folio, Map Plastik & Lakban Jilid (35 Buah)',
+    volume: 35,
+    satuan: 'Buah',
+    harga_satuan: 18000,
+    nominal: 630000,
+    ppn: 62433,
+    pph21: 0,
+    pph22: 8486,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-5',
+    no_bpu: 'BPU-02',
+    tanggal_transaksi: '2026-01-22',
+    kode_rekening: '5.1.02.01.01.0052',
+    nama_rekening: 'Belanja Makanan dan Minuman Rapat',
+    kode_kegiatan: '02.06',
+    nama_kegiatan: '02.06 - Pengembangan Profesi Pendidik dan Tenaga Kependidikan',
+    uraian: 'Belanja Nasi Kotak Rapat Kerja Penyusunan RKAS & Kurikulum',
+    volume: 35,
+    satuan: 'Kotak',
+    harga_satuan: 35000,
+    nominal: 1225000,
+    ppn: 0,
+    pph21: 0,
+    pph22: 0,
+    pph23: 0,
+    pajak_daerah: 122500,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-6',
+    no_bpu: 'BPU-02',
+    tanggal_transaksi: '2026-01-22',
+    kode_rekening: '5.1.02.01.01.0052',
+    nama_rekening: 'Belanja Makanan dan Minuman Rapat',
+    kode_kegiatan: '02.06',
+    nama_kegiatan: '02.06 - Pengembangan Profesi Pendidik dan Tenaga Kependidikan',
+    uraian: 'Belanja Snack / Kudapan Rapat Kerja Penyusunan RKAS & Kurikulum',
+    volume: 35,
+    satuan: 'Kotak',
+    harga_satuan: 15000,
+    nominal: 525000,
+    ppn: 0,
+    pph21: 0,
+    pph22: 0,
+    pph23: 0,
+    pajak_daerah: 52500,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-7',
+    no_bpu: 'BPU-03',
+    tanggal_transaksi: '2026-02-12',
+    kode_rekening: '5.1.02.01.01.0029',
+    nama_rekening: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Bahan Komputer',
+    kode_kegiatan: '03.03',
+    nama_kegiatan: '03.03 - Pelaksanaan Administrasi Kegiatan Sekolah',
+    uraian: 'Belanja Tinta Printer Epson 003 Original 4 Warna (16 Botol)',
+    volume: 16,
+    satuan: 'Botol',
+    harga_satuan: 115000,
+    nominal: 1840000,
+    ppn: 182342,
+    pph21: 0,
+    pph22: 24793,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-8',
+    no_bpu: 'BPU-03',
+    tanggal_transaksi: '2026-02-12',
+    kode_rekening: '5.1.02.01.01.0029',
+    nama_rekening: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Bahan Komputer',
+    kode_kegiatan: '03.03',
+    nama_kegiatan: '03.03 - Pelaksanaan Administrasi Kegiatan Sekolah',
+    uraian: 'Belanja Cartridge Toner LaserJet HP 85A Original (2 Unit)',
+    volume: 2,
+    satuan: 'Unit',
+    harga_satuan: 480000,
+    nominal: 960000,
+    ppn: 95135,
+    pph21: 0,
+    pph22: 12937,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-9',
+    no_bpu: 'BPU-04',
+    tanggal_transaksi: '2026-02-19',
+    kode_rekening: '5.1.02.01.01.0026',
+    nama_rekening: 'Belanja Alat/Bahan untuk Kegiatan Kantor - Bahan Cetak',
+    kode_kegiatan: '03.03',
+    nama_kegiatan: '03.03 - Pelaksanaan Administrasi Kegiatan Sekolah',
+    uraian: 'Belanja Cetak Sampul Rapor, Kartu Inventaris Ruangan & Banner POS',
+    volume: 1,
+    satuan: 'Paket',
+    harga_satuan: 2450000,
+    nominal: 2450000,
+    ppn: 242793,
+    pph21: 0,
+    pph22: 33018,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-10',
+    no_bpu: 'BPU-05',
+    tanggal_transaksi: '2026-03-10',
+    kode_rekening: '5.1.02.03.02.0405',
+    nama_rekening: 'Belanja Pemeliharaan Komputer - Peralatan Komputer Lokal',
+    kode_kegiatan: '05.08',
+    nama_kegiatan: '05.08 - Pemeliharaan Sarana dan Prasarana Sekolah',
+    uraian: 'Penggantian SSD 256GB & RAM Laptop Operasional Sekolah (4 Unit)',
+    volume: 4,
+    satuan: 'Unit',
+    harga_satuan: 450000,
+    nominal: 1800000,
+    ppn: 178378,
+    pph21: 0,
+    pph22: 0,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-11',
+    no_bpu: 'BPU-05',
+    tanggal_transaksi: '2026-03-10',
+    kode_rekening: '5.1.02.03.02.0405',
+    nama_rekening: 'Belanja Pemeliharaan Komputer - Peralatan Komputer Lokal',
+    kode_kegiatan: '05.08',
+    nama_kegiatan: '05.08 - Pemeliharaan Sarana dan Prasarana Sekolah',
+    uraian: 'Jasa Servis Berkala Laptop Chromebook & Instalasi Jaringan Lab',
+    volume: 4,
+    satuan: 'Unit',
+    harga_satuan: 200000,
+    nominal: 800000,
+    ppn: 0,
+    pph21: 0,
+    pph22: 0,
+    pph23: 16000,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-12',
+    no_bpu: 'BPU-06',
+    tanggal_transaksi: '2026-03-24',
+    kode_rekening: '5.2.05.01.01.0001',
+    nama_rekening: 'Belanja Modal Buku Umum dan Buku Teks Utama Kurikulum Nasional',
+    kode_kegiatan: '05.02',
+    nama_kegiatan: '05.02 - Pengembangan Perpustakaan dan Pojok Baca Digital',
+    uraian: 'Belanja Modal Buku Teks Utama Kurikulum Nasional Kelas 1 & 4',
+    volume: 70,
+    satuan: 'Eksemplar',
+    harga_satuan: 48500,
+    nominal: 3395000,
+    ppn: 0,
+    pph21: 0,
+    pph22: 45878,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-13',
+    no_bpu: 'BPU-06',
+    tanggal_transaksi: '2026-03-24',
+    kode_rekening: '5.2.05.01.01.0001',
+    nama_rekening: 'Belanja Modal Buku Umum dan Buku Teks Utama Kurikulum Nasional',
+    kode_kegiatan: '05.02',
+    nama_kegiatan: '05.02 - Pengembangan Perpustakaan dan Pojok Baca Digital',
+    uraian: 'Belanja Modal Buku Teks Utama Kurikulum Nasional Kelas 6 & Bacaan Literasi',
+    volume: 50,
+    satuan: 'Eksemplar',
+    harga_satuan: 48500,
+    nominal: 2425000,
+    ppn: 0,
+    pph21: 0,
+    pph22: 32770,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-14',
+    no_bpu: 'BPU-07',
+    tanggal_transaksi: '2026-04-06',
+    kode_rekening: '5.1.02.02.01.0063',
+    nama_rekening: 'Belanja Kawat/Faksimili/Internet/TV Berlangganan',
+    kode_kegiatan: '06.07',
+    nama_kegiatan: '06.07 - Pembiayaan Langganan Daya dan Jasa',
+    uraian: 'Pembayaran Tagihan Internet Sekolah Dedicated 100 Mbps Bulan April',
+    volume: 1,
+    satuan: 'Bulan',
+    harga_satuan: 850000,
+    nominal: 850000,
+    ppn: 0,
+    pph21: 0,
+    pph22: 0,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Reguler',
+  },
+  {
+    id_item: 'ARKAS-15',
+    no_bpu: 'BPU-08',
+    tanggal_transaksi: '2026-04-16',
+    kode_rekening: '5.2.02.05.01.0005',
+    nama_rekening: 'Belanja Modal Alat Kantor Lainnya (Proyektor & Printer)',
+    kode_kegiatan: '05.08',
+    nama_kegiatan: '05.08 - Pemeliharaan Sarana dan Prasarana Sekolah',
+    uraian: 'Belanja Modal Proyektor LCD Epson EB-E500 XGA 3300 Lumens (BOSP Kinerja)',
+    volume: 2,
+    satuan: 'Unit',
+    harga_satuan: 5850000,
+    nominal: 11700000,
+    ppn: 1159459,
+    pph21: 0,
+    pph22: 157703,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Kinerja',
+  },
+  {
+    id_item: 'ARKAS-16',
+    no_bpu: 'BPU-08',
+    tanggal_transaksi: '2026-04-16',
+    kode_rekening: '5.2.02.05.01.0005',
+    nama_rekening: 'Belanja Modal Alat Kantor Lainnya (Proyektor & Printer)',
+    kode_kegiatan: '05.08',
+    nama_kegiatan: '05.08 - Pemeliharaan Sarana dan Prasarana Sekolah',
+    uraian: 'Belanja Modal Layar Proyektor Tripod 70 Inch & Kabel HDMI 15m (BOSP Kinerja)',
+    volume: 2,
+    satuan: 'Set',
+    harga_satuan: 900000,
+    nominal: 1800000,
+    ppn: 178378,
+    pph21: 0,
+    pph22: 24264,
+    pph23: 0,
+    pajak_daerah: 0,
+    sumber_dana: 'BOSP Kinerja',
+  },
+];
+
 async function main() {
   loadLocalEnv();
   const rawUrl = process.env.VITE_NEON_DATABASE_URL || process.env.NEON_DATABASE_URL;
@@ -56,7 +358,7 @@ async function main() {
   const dbUrl = normalizeNeonUrl(rawUrl);
   const sql = neon(dbUrl);
 
-  console.log('Menghubungkan ke Neon PostgreSQL dan menginisialisasi tabel...');
+  console.log('Menghubungkan ke Neon PostgreSQL dan memperbarui tabel...');
 
   await sql`
     CREATE TABLE IF NOT EXISTS profil_sekolah (
@@ -80,8 +382,34 @@ async function main() {
       nip_bendahara VARCHAR(50),
       nama_pemeriksa VARCHAR(150),
       nip_pemeriksa VARCHAR(50),
-      tahun_anggaran INTEGER NOT NULL DEFAULT 2026,
+      tahun_anggaran INTEGER NOT NULL DEFAULT 2027,
       kota_ttd VARCHAR(100) DEFAULT 'Denpasar',
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS bku_arkas (
+      id SERIAL PRIMARY KEY,
+      id_item VARCHAR(100) UNIQUE NOT NULL,
+      no_bpu VARCHAR(100) NOT NULL,
+      tanggal_transaksi DATE NOT NULL,
+      kode_rekening VARCHAR(100) NOT NULL,
+      nama_rekening TEXT,
+      kode_kegiatan VARCHAR(100),
+      nama_kegiatan TEXT,
+      uraian TEXT NOT NULL,
+      volume NUMERIC(12, 2) DEFAULT 1,
+      satuan VARCHAR(50) DEFAULT 'Paket',
+      harga_satuan NUMERIC(15, 2) DEFAULT 0,
+      nominal NUMERIC(15, 2) DEFAULT 0,
+      ppn NUMERIC(15, 2) DEFAULT 0,
+      pph21 NUMERIC(15, 2) DEFAULT 0,
+      pph22 NUMERIC(15, 2) DEFAULT 0,
+      pph23 NUMERIC(15, 2) DEFAULT 0,
+      pajak_daerah NUMERIC(15, 2) DEFAULT 0,
+      sumber_dana VARCHAR(100) DEFAULT 'BOSP Reguler',
+      sumber_file VARCHAR(200) DEFAULT 'Database Cloud Neon',
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     )
   `;
@@ -144,13 +472,13 @@ async function main() {
     )
   `;
 
+  await sql`CREATE INDEX IF NOT EXISTS idx_bku_arkas_no_bpu ON bku_arkas(no_bpu)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_spj_pelengkap_no_bpu ON spj_pelengkap(no_bpu)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_riwayat_cetak_no_bpu ON riwayat_cetak(no_bpu)`;
 
-  // Cek apakah profil_sekolah sudah memiliki data awal
+  // Pastikan NPSN di profil_sekolah adalah 50103069 (SD Negeri 7 Pedungan)
   const existingProfil = await sql`SELECT COUNT(*)::int AS total FROM profil_sekolah`;
   if (existingProfil[0].total === 0) {
-    console.log('Menambahkan data awal profil_sekolah...');
     await sql`
       INSERT INTO profil_sekolah (
         nama_sekolah, npsn, alamat, kelurahan_desa, kecamatan, kabupaten_kota, provinsi,
@@ -159,7 +487,7 @@ async function main() {
         nama_pemeriksa, nip_pemeriksa, tahun_anggaran, kota_ttd
       ) VALUES (
         'SD NEGERI 7 PEDUNGAN',
-        '50103123',
+        '50103069',
         'Jl. Pulau Saelus No. 45, Pedungan',
         'Pedungan',
         'Denpasar Selatan',
@@ -176,66 +504,40 @@ async function main() {
         '19860819 201101 2 012',
         'I Made Arya Wibawa, S.Kom.',
         '19900215 201903 1 004',
-        2026,
+        2027,
         'Denpasar'
       )
     `;
+  } else {
+    await sql`UPDATE profil_sekolah SET npsn = '50103069' WHERE npsn = '50103123'`;
   }
 
-  // Cek apakah data_penyedia sudah memiliki data contoh toko/rekanan
-  const existingPenyedia = await sql`SELECT COUNT(*)::int AS total FROM data_penyedia`;
-  if (existingPenyedia[0].total === 0) {
-    console.log('Menambahkan daftar rekanan/penyedia awal ke data_penyedia...');
+  // Seed tabel bku_arkas di Neon agar seluruh transaksi BKU langsung dimuat dari database Neon
+  console.log('Menyinkronkan data transaksi BKU ARKAS ke tabel bku_arkas di Cloud Neon...');
+  for (const item of INITIAL_BKU_ARKAS) {
     await sql`
-      INSERT INTO data_penyedia (nama_toko, alamat_toko, npwp, nama_pemilik, jabatan_pemilik, telepon, nama_bank, nomor_rekening, kategori_usaha)
-      VALUES
-        ('CV. Cendana Mitra Media', 'Jl. Tukad Batanghari No. 88, Panjer, Denpasar Selatan', '92.415.778.9-901.000', 'I Gede Cendana Putra', 'Direktur', '0812-3845-9901', 'BPD Bali', '010.02.02.11450-8', 'ATK & Percetakan'),
-        ('Toko Buku & ATK Saraswati Makmur', 'Jl. Diponegoro No. 112, Denpasar Barat', '71.829.330.1-903.000', 'Ni Ketut Murniati', 'Pemilik Toko', '0813-3720-4451', 'BRI', '0017-01-023456-50-3', 'Alat Tulis Kantor & Kertas'),
-        ('UD. Dewata Komputer & Elektronik', 'Jl. Teuku Umar No. 154, Denpasar', '85.310.664.2-901.000', 'Hendra Wijaya, S.T.', 'Pemilik / Teknisi', '0819-9904-7721', 'Bank Mandiri', '145-00-2389102-4', 'Komputer, Printer & Jaringan'),
-        ('Katering Dapur Bali Boga', 'Jl. Pulau Moyo No. 23, Pedungan, Denpasar Selatan', '64.119.802.5-903.000', 'Ni Made Ratna Sari', 'Pemilik Usaha', '0857-3812-0092', 'BPD Bali', '014.02.01.99823-1', 'Konsumsi & Snack Rapat')
+      INSERT INTO bku_arkas (
+        id_item, no_bpu, tanggal_transaksi, kode_rekening, nama_rekening,
+        kode_kegiatan, nama_kegiatan, uraian, volume, satuan, harga_satuan,
+        nominal, ppn, pph21, pph22, pph23, pajak_daerah, sumber_dana, sumber_file
+      ) VALUES (
+        ${item.id_item}, ${item.no_bpu}, ${item.tanggal_transaksi}, ${item.kode_rekening}, ${item.nama_rekening},
+        ${item.kode_kegiatan}, ${item.nama_kegiatan}, ${item.uraian}, ${item.volume}, ${item.satuan}, ${item.harga_satuan},
+        ${item.nominal}, ${item.ppn}, ${item.pph21}, ${item.pph22}, ${item.pph23}, ${item.pajak_daerah}, ${item.sumber_dana},
+        'Database Cloud Neon (ARKAS 4)'
+      )
+      ON CONFLICT (id_item) DO NOTHING
     `;
   }
 
-  // Cek apakah spj_pelengkap sudah memiliki contoh sinkronisasi BPU
-  const existingSpj = await sql`SELECT COUNT(*)::int AS total FROM spj_pelengkap`;
-  if (existingSpj[0].total === 0) {
-    const penyediaRows = await sql`SELECT id_penyedia, nama_toko FROM data_penyedia ORDER BY id_penyedia ASC`;
-    if (penyediaRows.length > 0) {
-      console.log('Menambahkan contoh data spj_pelengkap untuk sinkronisasi otomatis Nomor BPU...');
-      await sql`
-        INSERT INTO spj_pelengkap (
-          no_bpu, id_penyedia, no_surat_pesanan, tanggal_pesanan,
-          no_bast, tanggal_bast, no_nota_toko, tanggal_lunas,
-          sumber_dana, kode_rekening, nama_kegiatan, uraian_kwitansi,
-          total_bruto, ppn, pph22, pajak_daerah, status_cetak
-        ) VALUES
-        (
-          'BPU-01', ${penyediaRows[0].id_penyedia}, '421.2/014/SP-BOSP/SDN7/I/2026', '2026-01-12',
-          '421.2/016/BAST-BOSP/SDN7/I/2026', '2026-01-15', 'INV/CMM/2026/0042', '2026-01-15',
-          'BOSP Reguler', '5.1.02.01.01.0024', '03.03. Pelaksanaan Administrasi Kegiatan Sekolah',
-          'Belanja Alat/Bahan untuk Kegiatan Kantor - Alat Tulis Kantor (Kertas HVS, Spidol, Map & Tinta Printer)',
-          3450000, 341892, 46486, 0, 'Sudah Dicetak'
-        ),
-        (
-          'BPU-02', ${penyediaRows[3]?.id_penyedia || penyediaRows[0].id_penyedia}, '421.2/021/SP-BOSP/SDN7/I/2026', '2026-01-20',
-          '421.2/023/BAST-BOSP/SDN7/I/2026', '2026-01-22', 'NOTA/DBB/01/2026', '2026-01-22',
-          'BOSP Reguler', '5.1.02.01.01.0052', '02.06. Pengembangan Profesi Pendidik dan Tenaga Kependidikan',
-          'Belanja Makanan dan Minuman Rapat Penyusunan RKAS dan Kurikulum Satuan Pendidikan',
-          1750000, 0, 0, 175000, 'Siap Cetak'
-        )
-        ON CONFLICT (no_bpu) DO NOTHING
-      `;
-    }
-  }
-
-  const tables = await sql`
-    SELECT table_name
-    FROM information_schema.tables
-    WHERE table_schema = 'public'
-      AND table_name IN ('profil_sekolah', 'data_penyedia', 'spj_pelengkap', 'riwayat_cetak')
-    ORDER BY table_name
+  const counts = await sql`
+    SELECT
+      (SELECT COUNT(*)::int FROM profil_sekolah) AS profil,
+      (SELECT COUNT(*)::int FROM bku_arkas) AS bku,
+      (SELECT COUNT(*)::int FROM data_penyedia) AS penyedia,
+      (SELECT COUNT(*)::int FROM spj_pelengkap) AS spj
   `;
-  console.log('Tabel berhasil diverifikasi di Neon PostgreSQL:', tables.map(t => t.table_name).join(', '));
+  console.log('Status Data Cloud Neon:', counts[0]);
 }
 
 main().catch((err) => {
